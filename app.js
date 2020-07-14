@@ -2,21 +2,20 @@
 
 // Bot Base setup and startup
 const common = require("./common");
+// Load console color stuff
+const chalk = require("chalk");
 
 // Replace the console warn and info log with my custom ones
 console.warn = common.printError;
 console.info = common.printInfo;
 
-console.info("Starting FoxTickets Discord bot...");
+console.log(chalk.bold.rgb(255, 123, 0)("Starting FoxTickets Discord bot..."));
 
 // Load Dependencies
-console.info("Loading dependencies...");
+console.info("- Loading dependencies...");
 
 // Load filesystem stuff
 const fs = require("fs");
-
-// Load console color stuff
-const chalk = require("chalk");
 
 // Load  discord.js module
 const Discord = require("discord.js");
@@ -42,7 +41,7 @@ let storage = {};
 let allowBoot = true;
 
 try {
-	console.info("Checking config files...");
+	console.info("- Checking config files...");
 
 	if (!fs.existsSync(settingsFile)) {
 		// Create default settings file
@@ -85,7 +84,29 @@ try {
 	if (allowBoot) {
 		console.info("✔ All checks passed, logging into Discord...");
 
-		// todo
+		// login to Discord with your app's token
+		client.login(settings.botToken);
+
+		// when the client is ready, run this code
+		// this event will only trigger one time after logging in
+		client.once("ready", () => {
+			console.info("✔ Connected to Discord");
+
+			const guilds = client.guilds.cache;
+
+			console.warn("Leaving all guilds that don't match ID in settings.json to prevent problems...");
+
+			guilds.each((guild) => {
+				if (guild.id != settings.serverSnowflake) {
+					guild.leave();
+				}
+			});
+
+			// If storage is empty, run first setup.
+			if (Object.keys(storage).length === 0 && storage.constructor === Object) {
+				firstSetup(guilds);
+			}
+		});
 	} else {
 		console.warn("Bot cannot boot until all above errors are solved.");
 		process.exit(0);
@@ -93,6 +114,22 @@ try {
 } catch (err) {
 	console.error(err);
 	process.exit(-1);
+}
+
+function firstSetup(guilds) {
+	console.info("Running first setup, send private message to server owner...");
+	// Todo
+
+	const guild = guilds.first();
+
+	const serverOwner = client.users.cache.get(guild.ownerID);
+
+	serverOwner.send("First Setup");
+}
+
+function saveStorage() {
+	const data = JSON.stringify(storage);
+	fs.writeFileSync(storageFile, data);
 }
 
 process.on("exit", function (code) {
